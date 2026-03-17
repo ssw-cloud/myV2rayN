@@ -66,6 +66,7 @@ jobs:
         file: ${{ github.workspace }}/v2rayN*.zip
         tag: ${{ github.event.inputs.release_tag }}
         file_glob: true
+        overwrite: true
         prerelease: true
 
   package_release:
@@ -115,4 +116,5 @@ jobs:
         file: ${{ github.workspace }}/dist/installer/*.exe
         tag: ${{ github.event.inputs.release_tag }}
         file_glob: true
+        overwrite: true
         prerelease: true
