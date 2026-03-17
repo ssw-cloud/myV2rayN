@@ -6,11 +6,15 @@ on:
       release_tag:
         required: false
         type: string
+  release:
+    types:
+      - published
   push:
     branches:
       - master
 
 env:
+  ReleaseTag: "${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.release_tag }}"
   OutputArch: "windows-64"
   OutputArchArm: "windows-arm64"
   OutputPath64:  "${{ github.workspace }}/v2rayN/Release/windows-64"
@@ -50,7 +54,7 @@ jobs:
     
     # release zip archive
     - name: Package release zip archive
-      if: github.event.inputs.release_tag != ''
+      if: env.ReleaseTag != ''
       run: |
         chmod 755 package-release-zip.sh
         ./package-release-zip.sh $OutputArch $OutputPath64
@@ -58,9 +62,58 @@ jobs:
     
     - name: Upload zip archive to release
       uses: svenstaro/upload-release-action@v2
-      if: github.event.inputs.release_tag != ''
+      if: env.ReleaseTag != ''
       with:
         file: ${{ github.workspace }}/v2rayN*.zip
-        tag: ${{ github.event.inputs.release_tag }}
+        tag: ${{ env.ReleaseTag }}
+        file_glob: true
+        prerelease: true
+
+  package_release:
+    if: github.event_name == 'release' || github.event.inputs.release_tag != ''
+    needs: build
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v6.0.2
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v5
+      with:
+        name: v2rayN-windows
+        path: ${{ github.workspace }}/dist/windows
+
+    - name: Install Inno Setup
+      shell: pwsh
+      run: choco install innosetup --no-progress -y
+
+    - name: Package Windows installer
+      shell: pwsh
+      run: |
+        $releaseTag = "${{ env.ReleaseTag }}"
+        if ([string]::IsNullOrWhiteSpace($releaseTag)) {
+          throw "Missing release tag"
+        }
+
+        $version = $releaseTag.TrimStart("v")
+        $installerDir = Join-Path $env:GITHUB_WORKSPACE "dist\installer"
+        New-Item -ItemType Directory -Force -Path $installerDir | Out-Null
+
+        & iscc "/DMyAppVersion=$version" "/DMyAppArch=windows-64" "/DMySourceDir=$env:GITHUB_WORKSPACE\dist\windows\windows-64" "/DMyOutputDir=$installerDir" "$env:GITHUB_WORKSPACE\installer\windows\v2rayN.iss"
+        & iscc "/DMyAppVersion=$version" "/DMyAppArch=windows-arm64" "/DMySourceDir=$env:GITHUB_WORKSPACE\dist\windows\windows-arm64" "/DMyOutputDir=$installerDir" "$env:GITHUB_WORKSPACE\installer\windows\v2rayN.iss"
+
+    - name: Upload Windows installers
+      uses: actions/upload-artifact@v7.0.0
+      with:
+        name: v2rayN-windows-installers
+        path: |
+          ${{ github.workspace }}/dist/installer/*.exe
+
+    - name: Upload installer to release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        file: ${{ github.workspace }}/dist/installer/*.exe
+        tag: ${{ env.ReleaseTag }}
         file_glob: true
         prerelease: true
