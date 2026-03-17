@@ -23,7 +23,7 @@ namespace ServiceLib.Resx {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     public class ResUI {
-        
+
         private static global::System.Resources.ResourceManager resourceMan;
         
         private static global::System.Globalization.CultureInfo resourceCulture;
@@ -1266,6 +1266,15 @@ namespace ServiceLib.Resx {
             }
         }
         
+        /// <summary>
+        ///   查找类似 Promotion 的本地化字符串。
+        /// </summary>
+        public static string menuPromotion {
+            get {
+                return ResourceManager.GetString("menuPromotion", resourceCulture);
+            }
+        }
+
         /// <summary>
         ///   查找类似 Latency Test 的本地化字符串。
         /// </summary>
