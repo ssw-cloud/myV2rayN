@@ -6,11 +6,15 @@ on:
       release_tag:
         required: false
         type: string
+  release:
+    types:
+      - published
   push:
     branches:
       - master
 
 env:
+  ReleaseTag: "${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.release_tag }}"
   OutputArch: "macos-64"
   OutputArchArm: "macos-arm64"
   OutputPath64:  "${{ github.workspace }}/v2rayN/Release/macos-64"
@@ -53,25 +57,25 @@ jobs:
     
     # release osx package
     - name: Package osx
-      if: github.event.inputs.release_tag != ''
+      if: env.ReleaseTag != ''
       run: |
         brew install create-dmg
         chmod 755 package-osx.sh
-        ./package-osx.sh $OutputArch $OutputPath64 ${{ github.event.inputs.release_tag }}
-        ./package-osx.sh $OutputArchArm $OutputPathArm64 ${{ github.event.inputs.release_tag }}
+        ./package-osx.sh $OutputArch $OutputPath64 $ReleaseTag
+        ./package-osx.sh $OutputArchArm $OutputPathArm64 $ReleaseTag
     
     - name: Upload dmg to release
       uses: svenstaro/upload-release-action@v2
-      if: github.event.inputs.release_tag != ''
+      if: env.ReleaseTag != ''
       with:
         file: ${{ github.workspace }}/v2rayN*.dmg
-        tag: ${{ github.event.inputs.release_tag }}
+        tag: ${{ env.ReleaseTag }}
         file_glob: true
         prerelease: true
 
     # release zip archive
     - name: Package release zip archive
-      if: github.event.inputs.release_tag != ''
+      if: env.ReleaseTag != ''
       run: |
         chmod 755 package-release-zip.sh
         ./package-release-zip.sh $OutputArch $OutputPath64
@@ -79,9 +83,9 @@ jobs:
     
     - name: Upload zip archive to release
       uses: svenstaro/upload-release-action@v2
-      if: github.event.inputs.release_tag != ''
+      if: env.ReleaseTag != ''
       with:
         file: ${{ github.workspace }}/v2rayN*.zip
-        tag: ${{ github.event.inputs.release_tag }}
+        tag: ${{ env.ReleaseTag }}
         file_glob: true
         prerelease: true
