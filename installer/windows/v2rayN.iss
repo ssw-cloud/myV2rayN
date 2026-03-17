@@ -45,7 +45,7 @@ Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
 UninstallDisplayIcon={app}\{#MyAppExeName}
-SetupIconFile=v2rayN\v2rayN\Resources\v2rayN.ico
+SetupIconFile=..\..\v2rayN\v2rayN\Resources\v2rayN.ico
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
