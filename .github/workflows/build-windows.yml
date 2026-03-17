@@ -75,7 +75,7 @@ jobs:
       uses: actions/checkout@v6.0.2
 
     - name: Download build artifacts
-      uses: actions/download-artifact@v5
+      uses: actions/download-artifact@v8
       with:
         name: v2rayN-windows
         path: ${{ github.workspace }}/dist/windows
