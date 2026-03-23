@@ -10,6 +10,9 @@ on:
     branches:
       - master
 
+permissions:
+  contents: write
+
 env:
   OutputArch: "macos-64"
   OutputArchArm: "macos-arm64"
@@ -67,6 +70,7 @@ jobs:
         file: ${{ github.workspace }}/v2rayN*.dmg
         tag: ${{ github.event.inputs.release_tag }}
         file_glob: true
+        overwrite: true
         prerelease: true
 
     # release zip archive
@@ -84,4 +88,5 @@ jobs:
         file: ${{ github.workspace }}/v2rayN*.zip
         tag: ${{ github.event.inputs.release_tag }}
         file_glob: true
+        overwrite: true
         prerelease: true

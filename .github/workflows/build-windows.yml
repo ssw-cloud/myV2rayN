@@ -10,6 +10,9 @@ on:
     branches:
       - master
 
+permissions:
+  contents: write
+
 env:
   OutputArch: "windows-64"
   OutputArchArm: "windows-arm64"
@@ -63,4 +66,5 @@ jobs:
         file: ${{ github.workspace }}/v2rayN*.zip
         tag: ${{ github.event.inputs.release_tag }}
         file_glob: true
+        overwrite: true
         prerelease: true
