@@ -4,17 +4,21 @@ public class CheckUpdateViewModel : MyReactiveObject
 {
     private const string _geo = "GeoFiles";
     private readonly string _v2rayN = ECoreType.v2rayN.ToString();
+    private readonly bool _coreOnlyMode;
     private List<CheckUpdateModel> _lstUpdated = [];
     private static readonly string _tag = "CheckUpdateViewModel";
 
     public IObservableCollection<CheckUpdateModel> CheckUpdateModels { get; } = new ObservableCollectionExtended<CheckUpdateModel>();
     public ReactiveCommand<Unit, Unit> CheckUpdateCmd { get; }
+    public string ActionText { get; }
     [Reactive] public bool EnableCheckPreReleaseUpdate { get; set; }
 
-    public CheckUpdateViewModel(Func<EViewAction, object?, Task<bool>>? updateView)
+    public CheckUpdateViewModel(Func<EViewAction, object?, Task<bool>>? updateView, bool coreOnlyMode = false)
     {
         _config = AppManager.Instance.Config;
         _updateView = updateView;
+        _coreOnlyMode = coreOnlyMode;
+        ActionText = coreOnlyMode ? "更新核心" : ResUI.menuCheckUpdate;
 
         CheckUpdateCmd = ReactiveCommand.CreateFromTask(CheckUpdate);
         CheckUpdateCmd.ThrownExceptions.Subscribe(ex =>
@@ -39,7 +43,10 @@ public class CheckUpdateViewModel : MyReactiveObject
 
         if (RuntimeInformation.ProcessArchitecture != Architecture.X86)
         {
-            CheckUpdateModels.Add(GetCheckUpdateModel(_v2rayN));
+            if (!_coreOnlyMode)
+            {
+                CheckUpdateModels.Add(GetCheckUpdateModel(_v2rayN));
+            }
             //Not Windows and under Win10
             if (!(Utils.IsWindows() && Environment.OSVersion.Version.Major < 10))
             {
@@ -49,6 +56,14 @@ public class CheckUpdateViewModel : MyReactiveObject
             }
         }
         CheckUpdateModels.Add(GetCheckUpdateModel(_geo));
+
+        if (_coreOnlyMode)
+        {
+            foreach (var item in CheckUpdateModels)
+            {
+                item.IsSelected = true;
+            }
+        }
     }
 
     private CheckUpdateModel GetCheckUpdateModel(string coreType)
