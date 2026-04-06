@@ -2,11 +2,11 @@ namespace v2rayN.Views;
 
 public partial class CheckUpdateView
 {
-    public CheckUpdateView()
+    public CheckUpdateView(bool coreOnlyMode = false)
     {
         InitializeComponent();
 
-        ViewModel = new CheckUpdateViewModel(UpdateViewHandler);
+        ViewModel = new CheckUpdateViewModel(UpdateViewHandler, coreOnlyMode);
 
         this.WhenActivated(disposables =>
         {
@@ -14,6 +14,7 @@ public partial class CheckUpdateView
 
             this.Bind(ViewModel, vm => vm.EnableCheckPreReleaseUpdate, v => v.togEnableCheckPreReleaseUpdate.IsChecked).DisposeWith(disposables);
             this.BindCommand(ViewModel, vm => vm.CheckUpdateCmd, v => v.btnCheckUpdate).DisposeWith(disposables);
+            this.OneWayBind(ViewModel, vm => vm.ActionText, v => v.btnCheckUpdate.Content).DisposeWith(disposables);
         });
     }
 
