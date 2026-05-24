@@ -1,5 +1,3 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace ServiceLib.Handler.Builder;
 
 public record CoreConfigContextBuilderResult(CoreConfigContext Context, NodeValidatorResult ValidatorResult)
@@ -25,19 +23,6 @@ public record CoreConfigContextBuilderAllResult(
     public NodeValidatorResult CombinedValidatorResult => new(
         [.. MainResult.ValidatorResult.Errors, .. PreSocksResult?.ValidatorResult.Errors ?? []],
         [.. MainResult.ValidatorResult.Warnings, .. PreSocksResult?.ValidatorResult.Warnings ?? []]);
-
-    /// <summary>
-    /// The main context with TunProtectSsPort/ProxyRelaySsPort and ProtectDomainList merged in
-    /// from the pre-socks result (if any). Pass this to the core runner.
-    /// </summary>
-    public CoreConfigContext ResolvedMainContext => PreSocksResult is not null
-        ? MainResult.Context with
-        {
-            TunProtectSsPort = PreSocksResult.Context.TunProtectSsPort,
-            ProxyRelaySsPort = PreSocksResult.Context.ProxyRelaySsPort,
-            ProtectDomainList = [.. MainResult.Context.ProtectDomainList ?? [], .. PreSocksResult.Context.ProtectDomainList ?? []],
-        }
-        : MainResult.Context;
 }
 
 public class CoreConfigContextBuilder
@@ -60,10 +45,10 @@ public class CoreConfigContextBuilder
             IsTunEnabled = config.TunModeItem.EnableTun,
             SimpleDnsItem = config.SimpleDNSItem,
             ProtectDomainList = [],
-            TunProtectSsPort = 0,
-            ProxyRelaySsPort = 0,
             RawDnsItem = await AppManager.Instance.GetDNSItem(coreType),
             RoutingItem = await ConfigHandler.GetDefaultRouting(config),
+            IsWindows = Utils.IsWindows(),
+            IsMacOS = Utils.IsMacOS(),
         };
         var validatorResult = NodeValidatorResult.Empty();
         var (actNode, nodeValidatorResult) = await ResolveNodeAsync(context, node);
@@ -124,7 +109,20 @@ public class CoreConfigContextBuilder
         }
 
         var preResult = await BuildPreSocksIfNeeded(mainResult.Context);
-        return new CoreConfigContextBuilderAllResult(mainResult, preResult);
+        if (preResult is null)
+        {
+            return new CoreConfigContextBuilderAllResult(mainResult, null);
+        }
+
+        var resolvedMainResult = mainResult with
+        {
+            Context = mainResult.Context with
+            {
+                IsTunEnabled = false, // main core doesn't handle tun directly when pre-socks is used
+                ProtectDomainList = [.. mainResult.Context.ProtectDomainList, .. preResult.Context.ProtectDomainList],
+            }
+        };
+        return new CoreConfigContextBuilderAllResult(resolvedMainResult, preResult);
     }
 
     /// <summary>
@@ -150,37 +148,7 @@ public class CoreConfigContextBuilder
             };
         }
 
-        if (!nodeContext.IsTunEnabled
-            || coreType != ECoreType.Xray
-            || node.ConfigType == EConfigType.Custom)
-        {
-            return null;
-        }
-
-        var tunProtectSsPort = Utils.GetFreePort();
-        var proxyRelaySsPort = Utils.GetFreePort();
-        var preItem = new ProfileItem()
-        {
-            CoreType = ECoreType.sing_box,
-            ConfigType = EConfigType.Shadowsocks,
-            Address = Global.Loopback,
-            Port = proxyRelaySsPort,
-            Password = Global.None,
-        };
-        preItem.SetProtocolExtra(preItem.GetProtocolExtra() with
-        {
-            SsMethod = Global.None,
-        });
-        var preResult2 = await Build(nodeContext.AppConfig, preItem);
-        return preResult2 with
-        {
-            Context = preResult2.Context with
-            {
-                ProtectDomainList = [.. nodeContext.ProtectDomainList ?? [], .. preResult2.Context.ProtectDomainList ?? []],
-                TunProtectSsPort = tunProtectSsPort,
-                ProxyRelaySsPort = proxyRelaySsPort,
-            }
-        };
+        return null;
     }
 
     /// <summary>
@@ -347,8 +315,9 @@ public class CoreConfigContextBuilder
         }
 
         // xhttp downloadSettings address protect
-        if (!string.IsNullOrEmpty(node.Extra)
-            && JsonUtils.ParseJson(node.Extra) is JsonObject extra
+        var xhttpExtra = node.GetTransportExtra().XhttpExtra;
+        if (!string.IsNullOrEmpty(xhttpExtra)
+            && JsonUtils.ParseJson(xhttpExtra) is JsonObject extra
             && extra.TryGetPropertyValue("downloadSettings", out var dsNode)
             && dsNode is JsonObject downloadSettings
             && downloadSettings.TryGetPropertyValue("address", out var dAddrNode)

@@ -8,6 +8,7 @@ namespace v2rayN.Views;
 public partial class MainWindow
 {
     private static Config _config;
+    private CheckUpdateView? _checkUpdateView;
     private BackupAndRestoreView? _backupAndRestoreView;
 
     public MainWindow()
@@ -24,6 +25,7 @@ public partial class MainWindow
         menuUpdateCore.Click += MenuUpdateCore_Click;
         menuPromotion.Click += MenuPromotion_Click;
         menuClose.Click += MenuClose_Click;
+        btnNewUpdate.Click += MenuCheckUpdate_Click;
         menuBackupAndRestore.Click += MenuBackupAndRestore_Click;
 
         ViewModel = new MainWindowViewModel(UpdateViewHandler);
@@ -101,6 +103,8 @@ public partial class MainWindow
             this.BindCommand(ViewModel, vm => vm.ReloadCmd, v => v.menuReload).DisposeWith(disposables);
             this.OneWayBind(ViewModel, vm => vm.BlReloadEnabled, v => v.menuReload.IsEnabled).DisposeWith(disposables);
 
+            this.OneWayBind(ViewModel, vm => vm.BlNewUpdate, v => v.btnNewUpdate.Visibility).DisposeWith(disposables);
+
             switch (_config.UiItem.MainGirdOrientation)
             {
                 case EGirdOrientation.Horizontal:
@@ -168,10 +172,10 @@ public partial class MainWindow
 
     private void OnProgramStarted(object state, bool timeout)
     {
-        Application.Current?.Dispatcher.Invoke((Action)(() =>
+        Application.Current?.Dispatcher.Invoke(() =>
         {
             ShowHideWindow(true);
-        }));
+        });
     }
 
     private async Task DelegateSnackMsg(string content)
@@ -362,6 +366,13 @@ public partial class MainWindow
         await ViewModel?.ScanImageResult(fileName);
     }
 
+    private void MenuCheckUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        _checkUpdateView ??= new CheckUpdateView();
+        DialogHost.Show(_checkUpdateView, "RootDialog");
+
+        AppEvents.HasUpdateNotified.Publish(false);
+    }
     private void MenuBackupAndRestore_Click(object sender, RoutedEventArgs e)
     {
         _backupAndRestoreView ??= new BackupAndRestoreView();
