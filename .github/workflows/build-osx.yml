@@ -19,14 +19,6 @@ jobs:
     with:
       target: macos
 
-  release-zip:
-    if: inputs.release_tag != ''
-    needs: build
-    uses: ./.github/workflows/package-zip.yml
-    with:
-      target: macos
-      release_tag: ${{ inputs.release_tag }}
-    
   dmg:
     name: package and release macOS dmg
     if: inputs.release_tag != ''
