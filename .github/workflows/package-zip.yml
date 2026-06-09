@@ -47,6 +47,13 @@ jobs:
     
     - name: Get v2rayN-core-bin
       run: wget -nv -O v2rayN-$Target-$Arch.zip "https://github.com/2dust/v2rayN-core-bin/raw/refs/heads/master/v2rayN-$Target-$Arch.zip"
+
+    - name: Remove mihomo from core bundle
+      run: |
+        7z d "v2rayN-$Target-$Arch.zip" \
+          "v2rayN-$Target-$Arch/bin/mihomo/*" \
+          "v2rayN-$Target-$Arch/bin/mihomo" \
+          "v2rayN-$Target-$Arch/bin/mihomo*" || true
     
     - name: Package zip archive
       run: 7z a -tZip v2rayN-$Target-$Arch.zip v2rayN-$Target-$Arch -mx1
@@ -64,4 +71,5 @@ jobs:
         file: ${{ github.workspace }}/v2rayN*.zip
         tag: ${{ inputs.release_tag }}
         file_glob: true
+        overwrite: true
         prerelease: true

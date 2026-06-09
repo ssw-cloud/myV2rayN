@@ -56,11 +56,6 @@ public sealed class CoreInfoManager
 
         if (RuntimeInformation.ProcessArchitecture != Architecture.X86)
         {
-            if (IsCheckUpdateSupported(ECoreType.v2rayN))
-            {
-                lst.Add(ECoreType.v2rayN);
-            }
-
             if (!(Utils.IsWindows() && Environment.OSVersion.Version.Major < 10))
             {
                 lst.Add(ECoreType.Xray);
@@ -76,7 +71,7 @@ public sealed class CoreInfoManager
     {
         return type switch
         {
-            ECoreType.v2rayN => !Utils.IsPackagedInstall(),
+            ECoreType.v2rayN => false,
             ECoreType.Xray => true,
             ECoreType.mihomo => true,
             ECoreType.sing_box => true,

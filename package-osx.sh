@@ -1,13 +1,30 @@
 #!/bin/bash
 
+set -e
+
 Arch="$1"
 OutputPath="$2"
 Version="$3"
 
+remove_mihomo_bundle() {
+    local root="$1"
+    find "$root" -path "*/bin/mihomo" -prune -exec rm -rf {} + 2>/dev/null || true
+    find "$root" -path "*/bin/mihomo*" -type f -exec rm -f {} + 2>/dev/null || true
+    find "$root" -path "*/bin/mihomo*" -type l -exec rm -f {} + 2>/dev/null || true
+}
+
 FileName="v2rayN-${Arch}.zip"
-wget -nv -O $FileName "https://github.com/2dust/v2rayN-core-bin/raw/refs/heads/master/$FileName"
-7z x $FileName
-cp -rf v2rayN-${Arch}/* $OutputPath
+TempDir="$(mktemp -d)"
+trap 'rm -rf "$TempDir"' EXIT
+
+BundleZip="$TempDir/$FileName"
+BundleDir="$TempDir/extracted"
+
+wget -nv -O "$BundleZip" "https://github.com/2dust/v2rayN-core-bin/raw/refs/heads/master/$FileName"
+mkdir -p "$BundleDir"
+7z x "$BundleZip" -o"$BundleDir" >/dev/null
+cp -rf "$BundleDir/v2rayN-${Arch}"/. "$OutputPath"
+remove_mihomo_bundle "$OutputPath"
 
 PackagePath="v2rayN-Package-${Arch}"
 mkdir -p "$PackagePath/v2rayN.app/Contents/Resources"

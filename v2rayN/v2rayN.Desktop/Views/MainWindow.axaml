@@ -91,12 +91,9 @@
                         <MenuItem x:Name="menuOpenTheFileLocation" Header="{x:Static resx:ResUI.menuOpenTheFileLocation}" />
                     </MenuItem>
 
-                    <MenuItem x:Name="menuHelp" Header="{x:Static resx:ResUI.menuHelp}">
-                        <MenuItem x:Name="menuCheckUpdate" Header="{x:Static resx:ResUI.menuCheckUpdate}" />
-                        <Separator />
-                    </MenuItem>
-
                     <MenuItem x:Name="menuReload" Header="{x:Static resx:ResUI.menuReload}" />
+
+                    <MenuItem x:Name="menuUpdateCore" Header="更新核心" />
 
                     <MenuItem x:Name="menuPromotion" Header="{x:Static resx:ResUI.menuPromotion}" />
 

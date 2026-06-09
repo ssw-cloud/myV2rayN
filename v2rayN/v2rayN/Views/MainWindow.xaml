@@ -238,25 +238,6 @@
                         <Separator />
                         <Menu Margin="0,1" Style="{StaticResource ToolbarMenu}">
                             <MenuItem
-                                x:Name="menuHelp"
-                                Padding="{StaticResource MarginLeftRight8}"
-                                AutomationProperties.Name="{x:Static resx:ResUI.menuHelp}">
-                                <MenuItem.Header>
-                                    <StackPanel Orientation="Horizontal">
-                                        <materialDesign:PackIcon
-                                            Margin="{StaticResource MarginRight8}"
-                                            VerticalAlignment="Center"
-                                            Kind="HelpCircleOutline" />
-                                        <TextBlock Text="{x:Static resx:ResUI.menuHelp}" />
-                                    </StackPanel>
-                                </MenuItem.Header>
-                                <MenuItem x:Name="menuCheckUpdate" Header="{x:Static resx:ResUI.menuCheckUpdate}" />
-                                <Separator Margin="-40,5" />
-                            </MenuItem>
-                        </Menu>
-                        <Separator />
-                        <Menu Margin="0,1" Style="{StaticResource ToolbarMenu}">
-                            <MenuItem
                                 x:Name="menuReload"
                                 Padding="{StaticResource MarginLeftRight8}"
                                 AutomationProperties.Name="{x:Static resx:ResUI.menuReload}">
@@ -267,6 +248,23 @@
                                             VerticalAlignment="Center"
                                             Kind="Reload" />
                                         <TextBlock Text="{x:Static resx:ResUI.menuReload}" />
+                                    </StackPanel>
+                                </MenuItem.Header>
+                            </MenuItem>
+                        </Menu>
+                        <Separator />
+                        <Menu Margin="0,1" Style="{StaticResource ToolbarMenu}">
+                            <MenuItem
+                                x:Name="menuUpdateCore"
+                                Padding="{StaticResource MarginLeftRight8}"
+                                AutomationProperties.Name="更新核心">
+                                <MenuItem.Header>
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon
+                                            Margin="{StaticResource MarginRight8}"
+                                            VerticalAlignment="Center"
+                                            Kind="Update" />
+                                        <TextBlock Text="更新核心" />
                                     </StackPanel>
                                 </MenuItem.Header>
                             </MenuItem>

@@ -4,18 +4,22 @@ public class CheckUpdateViewModel : MyReactiveObject
 {
     private const string _geo = "GeoFiles";
     private readonly ECoreType _v2rayN = ECoreType.v2rayN;
+    private readonly bool _coreOnlyMode;
     private List<CheckUpdateModel> _lstUpdated = [];
     private static readonly string _tag = "CheckUpdateViewModel";
 
     public IObservableCollection<CheckUpdateModel> CheckUpdateModels { get; } = new ObservableCollectionExtended<CheckUpdateModel>();
     public ReactiveCommand<Unit, Unit> CheckUpdateCmd { get; }
     public ReactiveCommand<Unit, Unit> CheckOnlyCmd { get; }
+    public string ActionText { get; }
     [Reactive] public bool EnableCheckPreReleaseUpdate { get; set; }
 
-    public CheckUpdateViewModel(Func<EViewAction, object?, Task<bool>>? updateView)
+    public CheckUpdateViewModel(Func<EViewAction, object?, Task<bool>>? updateView, bool coreOnlyMode = false)
     {
         _config = AppManager.Instance.Config;
         _updateView = updateView;
+        _coreOnlyMode = coreOnlyMode;
+        ActionText = coreOnlyMode ? "更新核心" : ResUI.menuCheckUpdate;
 
         CheckUpdateCmd = ReactiveCommand.CreateFromTask(CheckUpdate);
         CheckUpdateCmd.ThrownExceptions.Subscribe(ex =>
@@ -47,10 +51,22 @@ public class CheckUpdateViewModel : MyReactiveObject
 
         foreach (var type in CoreInfoManager.Instance.GetCheckUpdateCoreTypes())
         {
+            if (_coreOnlyMode && type == _v2rayN)
+            {
+                continue;
+            }
             CheckUpdateModels.Add(GetCheckUpdateModel(type));
         }
 
         CheckUpdateModels.Add(GetGeoFileCheckUpdateModel());
+
+        if (_coreOnlyMode)
+        {
+            foreach (var item in CheckUpdateModels)
+            {
+                item.IsSelected = true;
+            }
+        }
     }
 
     private CheckUpdateModel GetCheckUpdateModel(ECoreType coreType)
