@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+export DOTNET_NUGET_SIGNATURE_VERIFICATION="${DOTNET_NUGET_SIGNATURE_VERIFICATION:-false}"
+
 VERSION_ARG=""
 WITH_CORE="both"
 FORCE_NETCORE=0
@@ -207,10 +209,16 @@ sync_submodules() {
 git_try_checkout() {
   local want="$1"
   local ref=""
+  local candidate=""
 
   if git rev-parse --git-dir >/dev/null 2>&1; then
     git fetch --tags --force --prune --depth=1 || true
-    git rev-parse "refs/tags/${want}" >/dev/null 2>&1 && ref="$want"
+    for candidate in "$want" "v${want#v}"; do
+      if git rev-parse "refs/tags/${candidate}" >/dev/null 2>&1; then
+        ref="$candidate"
+        break
+      fi
+    done
 
     if [[ -n "$ref" ]]; then
       echo "[OK] Found ref '${ref}', checking out..."
@@ -299,6 +307,13 @@ bundle_url_for_rid() {
     linux-loongarch64) echo "https://raw.githubusercontent.com/2dust/v2rayN-core-bin/refs/heads/master/v2rayN-linux-loong64.zip" ;;
     *)                 return 1 ;;
   esac
+}
+
+remove_mihomo_bundle() {
+  local root="$1"
+  find "$root" -path "*/bin/mihomo" -prune -exec rm -rf {} + 2>/dev/null || true
+  find "$root" -path "*/bin/mihomo*" -type f -exec rm -f {} + 2>/dev/null || true
+  find "$root" -path "*/bin/mihomo*" -type l -exec rm -f {} + 2>/dev/null || true
 }
 
 download_xray() {
@@ -448,6 +463,7 @@ populate_assets_zip_mode() {
   fi
 
   unify_geo_layout "$outroot"
+  remove_mihomo_bundle "$outroot"
   rm -rf "$tmp"
 
   echo "[+] Bundle extracted to $outroot"

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+export DOTNET_NUGET_SIGNATURE_VERIFICATION="${DOTNET_NUGET_SIGNATURE_VERIFICATION:-false}"
+
 VERSION_ARG=""
 WITH_CORE="both"
 FORCE_NETCORE=0
@@ -174,10 +176,16 @@ sync_submodules() {
 git_try_checkout() {
   local want="$1"
   local ref=""
+  local candidate=""
 
   if git rev-parse --git-dir >/dev/null 2>&1; then
     git fetch --tags --force --prune --depth=1 || true
-    git rev-parse "refs/tags/${want}" >/dev/null 2>&1 && ref="$want"
+    for candidate in "$want" "v${want#v}"; do
+      if git rev-parse "refs/tags/${candidate}" >/dev/null 2>&1; then
+        ref="$candidate"
+        break
+      fi
+    done
 
     if [[ -n "$ref" ]]; then
       echo "[OK] Found ref '${ref}', checking out..."
@@ -269,6 +277,13 @@ bundle_url_for_rid() {
     linux-arm64) echo "https://raw.githubusercontent.com/2dust/v2rayN-core-bin/refs/heads/master/v2rayN-linux-arm64.zip" ;;
     *)           return 1 ;;
   esac
+}
+
+remove_mihomo_bundle() {
+  local root="$1"
+  find "$root" -path "*/bin/mihomo" -prune -exec rm -rf {} + 2>/dev/null || true
+  find "$root" -path "*/bin/mihomo*" -type f -exec rm -f {} + 2>/dev/null || true
+  find "$root" -path "*/bin/mihomo*" -type l -exec rm -f {} + 2>/dev/null || true
 }
 
 download_xray() {
@@ -418,6 +433,7 @@ populate_assets_zip_mode() {
   fi
 
   unify_geo_layout "$outroot"
+  remove_mihomo_bundle "$outroot"
   rm -rf "$tmp"
 
   echo "[+] Bundle extracted to $outroot"
@@ -478,8 +494,27 @@ publish_binary() {
   dotnet publish "$PROJECT" -c Release -r "$rid" -p:PublishSingleFile=false -p:SelfContained=true
 }
 
+get_rpm_version() {
+  printf '%s' "${VERSION%%-*}" | sed -E 's/[^A-Za-z0-9._+~]/./g'
+}
+
+get_rpm_release() {
+  local release="1"
+
+  if [[ "$VERSION" == *-* ]]; then
+    release="1.${VERSION#*-}"
+  fi
+
+  printf '%s' "$release" | sed -E 's/[^A-Za-z0-9._+~]/./g'
+}
+
 write_spec_file() {
   local specfile="$1"
+  local rpm_version=""
+  local rpm_release=""
+
+  rpm_version="$(get_rpm_version)"
+  rpm_release="$(get_rpm_release)"
 
   cat > "$specfile" <<'SPEC'
 %global debug_package %{nil}
@@ -489,7 +524,7 @@ write_spec_file() {
 
 Name:           v2rayN
 Version:        __VERSION__
-Release:        1%{?dist}
+Release:        __RELEASE__%{?dist}
 Summary:        v2rayN (Avalonia) GUI client for Linux (x86_64/aarch64)
 License:        GPL-3.0-only
 URL:            https://github.com/2dust/v2rayN
@@ -573,7 +608,8 @@ install -m0644 %{_builddir}/__PKGROOT__/v2rayn.png %{buildroot}%{_datadir}/icons
 %{_datadir}/icons/hicolor/256x256/apps/v2rayn.png
 SPEC
 
-  sed -i "s/__VERSION__/${VERSION}/g" "$specfile"
+  sed -i "s/__VERSION__/${rpm_version}/g" "$specfile"
+  sed -i "s/__RELEASE__/${rpm_release}/g" "$specfile"
   sed -i "s/__PKGROOT__/${PKGROOT}/g" "$specfile"
 }
 
@@ -590,6 +626,8 @@ package_binary() {
   local project_dir=""
   local icon_candidate=""
   local f=""
+  local rpm_version=""
+  local rpm_release=""
 
   pubdir="$(dirname "$PROJECT")/bin/Release/net10.0/${rid}/publish"
   [[ -d "$pubdir" ]] || { echo "Publish directory not found: $pubdir"; return 1; }
@@ -618,8 +656,11 @@ package_binary() {
   write_spec_file "$specfile"
   rpmbuild -ba "$specfile" --target "$rpm_target"
 
+  rpm_version="$(get_rpm_version)"
+  rpm_release="$(get_rpm_release)"
+
   echo "Build done for $short. RPM at:"
-  for f in "${RPM_TOPDIR}/RPMS/${archdir}/v2rayN-${VERSION}-1"*.rpm; do
+  for f in "${RPM_TOPDIR}/RPMS/${archdir}/v2rayN-${rpm_version}-${rpm_release}"*.rpm; do
     [[ -e "$f" ]] || continue
     echo "  $f"
     BUILT_RPMS+=("$f")
