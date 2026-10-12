@@ -66,7 +66,7 @@ public class ProfileItem
 
     public bool IsValid()
     {
-        if (IsComplex())
+        if (IsComplex() || ConfigType == EConfigType.Outbound)
         {
             return true;
         }
@@ -144,6 +144,11 @@ public class ProfileItem
     {
         _transportExtraCache = transportExtra;
         TransportExtra = JsonUtils.Serialize(transportExtra, false);
+    }
+
+    public bool GetAllowInsecure()
+    {
+        return AllowInsecure == Global.StringTrue;
     }
 
     #endregion function

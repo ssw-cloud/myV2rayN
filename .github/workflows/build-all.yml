@@ -4,41 +4,22 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        required: false
+        required: true
         type: string
 
-permissions: 
+permissions:
   actions: write
+  contents: read
 
 jobs:
   update:
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: ${{ inputs.release_tag }}
     steps:
-
-      - name: Trigger build windows
-        if: inputs.release_tag != ''
+      - name: Trigger Windows and macOS releases
         run: |
-          curl -X POST \
-            -H "Accept: application/vnd.github.v3+json" \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            https://api.github.com/repos/${{ github.repository }}/actions/workflows/build-windows.yml/dispatches \
-            -d "{
-              \"ref\": \"master\",
-              \"inputs\": {
-                \"release_tag\": \"${{ inputs.release_tag }}\"
-              }
-            }"
-
-      - name: Trigger build osx
-        if: inputs.release_tag != ''
-        run: |
-          curl -X POST \
-            -H "Accept: application/vnd.github.v3+json" \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            https://api.github.com/repos/${{ github.repository }}/actions/workflows/build-osx.yml/dispatches \
-            -d "{
-              \"ref\": \"master\",
-              \"inputs\": {
-                \"release_tag\": \"${{ inputs.release_tag }}\"
-              }
-            }"
+          gh workflow run build-windows.yml --ref "$RELEASE_TAG" -f release_tag="$RELEASE_TAG"
+          gh workflow run build-osx.yml --ref "$RELEASE_TAG" -f release_tag="$RELEASE_TAG"

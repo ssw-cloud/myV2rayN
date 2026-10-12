@@ -15,6 +15,9 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        var viewLocator = SimpleViewLocator.Instance;
+        DataTemplates.Add(viewLocator);
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             if (!Design.IsDesignMode)
@@ -23,8 +26,10 @@ public partial class App : Application
                 DataContext = StatusBarViewModel.Instance;
             }
 
-            desktop.Exit += OnExit;
-            desktop.MainWindow = new MainWindow();
+            var mainWindowViewModel = new MainWindowViewModel();
+            var mainWindow = (MainWindow)viewLocator.Build(mainWindowViewModel);
+            mainWindow.ViewModel = mainWindowViewModel;
+            desktop.MainWindow = mainWindow;
 
             if (OperatingSystem.IsMacOS())
             {
@@ -35,6 +40,8 @@ public partial class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 
+    #region MacOS Activation
+
     private void OnMacOSActivated(object? sender, ActivatedEventArgs args)
     {
         if (args.Kind != ActivationKind.Reopen)
@@ -42,16 +49,68 @@ public partial class App : Application
             return;
         }
 
+        if ((ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow is not MainWindow mainWindow)
+        {
+            return;
+        }
+
+        var isMiniaturized = MacAppUtils.IsWindowMiniaturized(mainWindow);
+
         Dispatcher.UIThread.Post(() =>
         {
-            ((ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow as MainWindow)?.ShowHideWindow(true);
+            if (isMiniaturized)
+            {
+                RestoreMacOSAccessoryPolicyAfterMiniaturize(mainWindow);
+                mainWindow.ShowHideWindow(true);
+                return;
+            }
 
             if (!AppManager.Instance.Config.UiItem.MacOSShowInDock)
             {
                 MacAppUtils.SetActivationPolicyAccessory();
             }
+
+            mainWindow.ShowHideWindow(true);
         });
     }
+
+    private static void RestoreMacOSAccessoryPolicyAfterMiniaturize(MainWindow mainWindow)
+    {
+        if (AppManager.Instance.Config.UiItem.MacOSShowInDock)
+        {
+            return;
+        }
+
+        mainWindow
+            .GetObservable(Window.WindowStateProperty)
+            .Skip(1)
+            .Where(state => state != WindowState.Minimized)
+            .Take(1)
+            .ObserveOn(RxSchedulers.MainThreadScheduler)
+            .Subscribe(_ => QueueMacOSAccessoryPolicyRestore(mainWindow));
+    }
+
+    private static void QueueMacOSAccessoryPolicyRestore(MainWindow mainWindow)
+    {
+        // AppKit may keep isMiniaturized set until the Dock restore animation finishes.
+        DispatcherTimer.RunOnce(() => RestoreMacOSAccessoryPolicy(mainWindow), TimeSpan.FromMilliseconds(300));
+    }
+
+    private static void RestoreMacOSAccessoryPolicy(MainWindow mainWindow)
+    {
+        if (AppManager.Instance.Config.UiItem.MacOSShowInDock || MacAppUtils.IsWindowMiniaturized(mainWindow))
+        {
+            return;
+        }
+
+        MacAppUtils.SetActivationPolicyAccessory();
+        mainWindow.Activate();
+        mainWindow.Focus();
+    }
+
+    #endregion MacOS Activation
+
+    #region App Event
 
     private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
     {
@@ -66,19 +125,19 @@ public partial class App : Application
         Logging.SaveLog("TaskScheduler_UnobservedTaskException", e.Exception);
     }
 
-    private void OnExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
-    {
-    }
-
     private async void MenuAddServerViaClipboardClick(object? sender, EventArgs e)
     {
-        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        try
         {
-            if (desktop.MainWindow != null)
+            if (Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime { MainWindow: not null })
             {
                 AppEvents.AddServerViaClipboardRequested.Publish();
                 await Task.Delay(1000);
             }
+        }
+        catch (Exception ex)
+        {
+            Logging.SaveLog("MenuAddServerViaClipboardClick", ex);
         }
     }
 
@@ -87,4 +146,6 @@ public partial class App : Application
         await AppManager.Instance.AppExitAsync(false);
         AppManager.Instance.Shutdown(true);
     }
+
+    #endregion App Event
 }
