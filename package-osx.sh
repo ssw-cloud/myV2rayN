@@ -4,7 +4,9 @@ set -e
 
 Arch="$1"
 OutputPath="$2"
-Version="$3"
+ReleaseTag="$3"
+Version="${ReleaseTag#v}"
+Version="${Version%%-*}"
 
 remove_mihomo_bundle() {
     local root="$1"
