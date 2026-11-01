@@ -797,7 +797,7 @@ namespace ServiceLib.Resx {
                 return ResourceManager.GetString("menuAddMasqueServer", resourceCulture);
             }
         }
-        
+
         /// <summary>
         ///   查找类似 Add [NaïveProxy] 的本地化字符串。
         /// </summary>
@@ -941,7 +941,7 @@ namespace ServiceLib.Resx {
                 return ResourceManager.GetString("menuCheckAndUpdate", resourceCulture);
             }
         }
-        
+
         /// <summary>
         ///   查找类似 Only Check 的本地化字符串。
         /// </summary>
